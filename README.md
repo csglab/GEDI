@@ -1,13 +1,13 @@
-# GEDI
+# GEDI: Gene expression decomposition and integration
 
 Data and code used to run GEDI on a pbmc data from [https://doi.org/10.1038/s41587-020-0465-8] This data is peripheral mono nuclear cells profiled with single cell RNA seq across different sequencing technologies. We have multiple batches ( each sequencing technology ) for the same set of cell types.
 
 1. process_data.Rmd: Create a Single Cell Experiment Object from a raw count matrix and metadata and obtain most variable genes. 
 2. run_gedi.Rmd : Running GEDI with raw counts and a C matrix. Performs integration, interpretation and imputation of gene expression. 
 
-Dependencies for GEDI:
+#### **Dependencies:** 
 
-R dependencies:
+R dependencies for GEDI:
 
   * Rcpp
   * RcppEigen
@@ -33,7 +33,7 @@ Other R dependencies (used for the notebooks):
   * viridis
   * RColorBrewer
 
-Data:
+#### **Data:** 
 
 * raw_counts_initial.rds [ raw counts of pbmcs ]
 * meta_initial.rds [ metadata of pbmcs ]
