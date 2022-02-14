@@ -86,5 +86,5 @@ toc()
 
 ```
 
-For a full tutorial, please see: 
+For a full tutorial, please see the run_gedi.html example. 
 
