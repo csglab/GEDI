@@ -5,7 +5,7 @@ Data and code used to run GEDI on a pbmc data from [https://doi.org/10.1038/s415
 1. process_data.Rmd: Create a Single Cell Experiment Object from a raw count matrix and metadata and obtain most variable genes. 
 2. run_gedi.Rmd : Running GEDI with raw counts and a C matrix. Performs integration, interpretation and imputation of gene expression. 
 
-#### **Dependencies:** 
+## **Dependencies:** 
 
 R dependencies for GEDI:
 
@@ -33,7 +33,7 @@ Other R dependencies (used for the notebooks):
   * viridis
   * RColorBrewer
 
-#### **Data:** 
+## **Data:** 
 
 * raw_counts_initial.rds [ raw counts of pbmcs ]
 * meta_initial.rds [ metadata of pbmcs ]
@@ -87,4 +87,8 @@ toc()
 ```
 
 For a full tutorial, please see the run_gedi.html example. 
+
+## **Formulation:**
+
+To understand GEDI formulation, please refer to the Model.v23.orthoZ.corrected_variance.pdf document.
 
