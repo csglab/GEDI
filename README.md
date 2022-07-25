@@ -48,7 +48,7 @@ Note: The original pbmc data contained 2 experiments, pbmc1 and pbmc2. The data 
 Load GEDI functions
 
 ```{r}
-source("gedi/scIntegration.v98.svdC.R") # load GEDI functions
+source("gedi/scIntegration.v106.hierarchical_O_si.R") # load GEDI functions
 ```
 
 #### **Arguments:**
@@ -66,7 +66,7 @@ source("gedi/scIntegration.v98.svdC.R") # load GEDI functions
 **Optional arguments**:
 
 * C: The gene-level biological prior. If NULL, it means that there is no prior for Z
-* H: The gene-level prior for unwanted sources of variation. If NULL, there will be no prior for Qi 
+* H: Sample-level prior for sources of variation. If NULL, there will be no prior for Qi 
 
 For this example, we are going to use GEDI with the raw counts, Bsphere mode and a matrix of cell type markers ( from cellmarker database) as prior biological information.
 
