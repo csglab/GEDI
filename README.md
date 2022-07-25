@@ -90,5 +90,5 @@ For a full tutorial, please see the run_gedi.html example.
 
 ## **Formulation:**
 
-To understand GEDI formulation, please refer to the Model.v23.orthoZ.corrected_variance.pdf document.
+To understand GEDI formulation, please refer to the Model.v24.sample_variables.pdf document.
 
