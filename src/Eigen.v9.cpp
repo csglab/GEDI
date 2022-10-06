@@ -433,6 +433,14 @@ SEXP Yi_var_paired(
   return Rcpp::wrap( 1/(M*expYi/(1+expYi).square()+1/sigma2) );
 }
 
+// Returns the variance of Yi-Yhat
+// [[Rcpp::export]]
+SEXP predict_Yhat(
+    Eigen::MatrixXd ZDBi, Eigen::MatrixXd QiDBi,
+    Eigen::VectorXd si, Eigen::VectorXd o, Eigen::VectorXd oi ) { 
+  return Rcpp::wrap( ((ZDBi+QiDBi).rowwise()+si.transpose()).colwise()+(o+oi) );
+}
+
 // Returns the root mean squared difference of two matrices
 // [[Rcpp::export]]
 double matRMSD( Eigen::MatrixXd A, Eigen::MatrixXd B ) {

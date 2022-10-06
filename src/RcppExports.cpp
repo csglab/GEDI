@@ -479,6 +479,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// predict_Yhat
+SEXP predict_Yhat(Eigen::MatrixXd ZDBi, Eigen::MatrixXd QiDBi, Eigen::VectorXd si, Eigen::VectorXd o, Eigen::VectorXd oi);
+RcppExport SEXP _GEDI_predict_Yhat(SEXP ZDBiSEXP, SEXP QiDBiSEXP, SEXP siSEXP, SEXP oSEXP, SEXP oiSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type ZDBi(ZDBiSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type QiDBi(QiDBiSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type si(siSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type o(oSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type oi(oiSEXP);
+    rcpp_result_gen = Rcpp::wrap(predict_Yhat(ZDBi, QiDBi, si, o, oi));
+    return rcpp_result_gen;
+END_RCPP
+}
 // matRMSD
 double matRMSD(Eigen::MatrixXd A, Eigen::MatrixXd B);
 RcppExport SEXP _GEDI_matRMSD(SEXP ASEXP, SEXP BSEXP) {
@@ -537,6 +552,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_GEDI_Yi_SSE_M_paired", (DL_FUNC) &_GEDI_Yi_SSE_M_paired, 9},
     {"_GEDI_Yi_var", (DL_FUNC) &_GEDI_Yi_var, 2},
     {"_GEDI_Yi_var_paired", (DL_FUNC) &_GEDI_Yi_var_paired, 4},
+    {"_GEDI_predict_Yhat", (DL_FUNC) &_GEDI_predict_Yhat, 5},
     {"_GEDI_matRMSD", (DL_FUNC) &_GEDI_matRMSD, 2},
     {"_GEDI_vecRMSD", (DL_FUNC) &_GEDI_vecRMSD, 2},
     {NULL, NULL, 0}

@@ -129,6 +129,10 @@ Yi_var_paired <- function(Yi, M1i, M2i, sigma2) {
     .Call('_GEDI_Yi_var_paired', PACKAGE = 'GEDI', Yi, M1i, M2i, sigma2)
 }
 
+predict_Yhat <- function(ZDBi, QiDBi, si, o, oi) {
+    .Call('_GEDI_predict_Yhat', PACKAGE = 'GEDI', ZDBi, QiDBi, si, o, oi)
+}
+
 matRMSD <- function(A, B) {
     .Call('_GEDI_matRMSD', PACKAGE = 'GEDI', A, B)
 }
