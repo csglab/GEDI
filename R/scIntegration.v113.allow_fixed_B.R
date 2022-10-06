@@ -1564,7 +1564,7 @@ dispersion.gedi <- function( object, subsample=1e6 ) {
 #' @return ggplot2 object
 #' @export
 #'
-plot.dispersion <- function(dispersion) {
+plot_dispersion <- function(dispersion) {
   ggplot2::ggplot( dispersion ) +
     ggplot2::geom_point( ggplot2::aes_string(x="Expected_Var",y="Observed_Var", color="Sample"), size=0.1 ) +
     ggplot2::scale_x_log10() + ggplot2::scale_y_log10() +
