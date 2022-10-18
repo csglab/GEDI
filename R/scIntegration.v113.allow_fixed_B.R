@@ -1417,23 +1417,56 @@ svd.vectorField.gedi <- function( object, start.cond, end.cond ) {
 #' @param colour vector of variable to plot
 #' @param alpha alpha
 #' @param randomize Logical. Whether to randomize data before plotting.
+#' @param nbin number of bins
+#' @param minNum minNum
 #'
 #' @return ggplot2 object
 #' @export
 #'
-plot_vectorField <- function(embedding_mat,colour,alpha=1,randomize=T) {
+plot_vectorField <- function(embedding_mat,colour=1,alpha=1,randomize=T,nbin=50,minNum=10) {
   # The first half of the rows in the provided matrix are the start points,
   #  and the second half are the end points of the vector field arrows
-  n <- nrow(embedding_mat)/2
-  # create a data frame that will have the embedding as well as the colors
+    n <- nrow(embedding_mat)/2
+  if(length(colour)==1) {
+    colour=rep(colour,n)
+  }
+  if(length(alpha)==1) {
+    alpha=rep(alpha,n)
+  }
+  Dim1 <- embedding_mat[1:n,1]
+  Dim2 <- embedding_mat[1:n,2]
+  To1 <- embedding_mat[(n+1):(n*2),1]
+  To2 <- embedding_mat[(n+1):(n*2),2]
+  
+  # Assign the data points into elements of a grid, and calculate the average
+  #  vector  per grid element
+  xbinlims <- seq(
+    min(Dim1), max(Dim1),
+    length.out=nbin+1 )
+  ybinlims <- seq(
+    min(Dim2), max(Dim2),
+    length.out=nbin+1 )
+  xbins <- cut( Dim1, xbinlims, include.lowest = T)
+  ybins <- cut( Dim2, ybinlims, include.lowest = T)
+  bins <- list(paste0(xbins,ybins))
+  
   embedding_obj <- data.frame(
-    Dim1=embedding_mat[1:n,1],
-    Dim2=embedding_mat[1:n,2],
-    To1=embedding_mat[(n+1):(n*2),1],
-    To2=embedding_mat[(n+1):(n*2),2],
-    Color=colour,
-    Alpha=alpha )
-
+    Dim1 = stats::aggregate(Dim1,bins,mean)[,2],
+    Dim2 = stats::aggregate(Dim2,bins,mean)[,2],
+    To1 = stats::aggregate(To1,bins,mean)[,2],
+    To2 = stats::aggregate(To2,bins,mean)[,2],
+    Alpha = stats::aggregate(alpha,bins,mean)[,2],
+    n = stats::aggregate(Dim1,bins,length)[,2] )
+  if( is.numeric(colour) ) {
+    embedding_obj$Color <- stats::aggregate(colour,bins,mean)[,2]
+  } else {
+    embedding_obj$Color <- stats::aggregate(colour,bins,function(x)names(which.max(table(x))))[,2]
+  }
+  embedding_obj$deltaDim1 <- embedding_obj$To1 - embedding_obj$Dim1
+  embedding_obj$deltaDim2 <- embedding_obj$To2 - embedding_obj$Dim2
+  # Filter the grid based on the minimum required observations per grid element
+  embedding_obj <- embedding_obj[ embedding_obj$n >= minNum, ]
+  
   #embedding_obj <- embedding_obj[ sample(1:n,10000), ]
 
   # randomize the order of the objects
@@ -1441,23 +1474,25 @@ plot_vectorField <- function(embedding_mat,colour,alpha=1,randomize=T) {
     embedding_obj <- embedding_obj[ sample.int(nrow(embedding_obj)), ]
   }
   # create the plots
-  if(is.numeric(colour)) # the color variable is numeric
+  if(length(unique(colour))==1) {
+    ggplot2::ggplot(
+      embedding_obj, ggplot2::aes_string( x="Dim1", y="Dim2", dx="deltaDim1", dy="deltaDim2", alpha="Alpha"))+
+      metR::geom_arrow(pivot=0)+
+      ggplot2::theme_minimal()
+  } else if(is.numeric(colour)) # the color variable is numeric
   {
     #embedding_obj$Color <- embedding_obj$Color - mean(embedding_obj$Color)
     lim <- stats::quantile(abs(embedding_obj$Color),0.99)
     ggplot2::ggplot(
-      embedding_obj, ggplot2::aes_string( x="Dim1", y="Dim2", xend="To1", yend="To2", colour="Color", alpha="Alpha"))+
-      # geom_point(size=0.05)+
-      ggplot2::geom_segment(size=0.1,arrow = grid::arrow(length=grid::unit(0.1,units = "cm"),angle=15,type="closed"))+
+      embedding_obj, ggplot2::aes_string( x="Dim1", y="Dim2", dx="deltaDim1", dy="deltaDim2", colour="Color", alpha="Alpha"))+
+      metR::geom_arrow(pivot=0)+
       ggplot2::scale_color_gradientn( limits=c(-lim,lim), colours=c("blue","light grey","red"), oob=scales::squish )+
       ggplot2::theme_minimal()
   } else {
     ggplot2::ggplot(
-      embedding_obj, ggplot2::aes_string( x="Dim1", y="Dim2", xend="To1", yend="To2", colour="Color", alpha="Alpha"))+
-      # geom_point(size=0.05)+
-      ggplot2::geom_segment(size=0.1,arrow = grid::arrow(length=grid::unit(0.1,units = "cm"),angle=15,type="closed"))+
-      ggplot2::theme_minimal()+
-      ggplot2::guides(colour=ggplot2::guide_legend(override.aes=list(size=3)))
+      embedding_obj, ggplot2::aes_string( x="Dim1", y="Dim2", dx="deltaDim1", dy="deltaDim2", colour="Color", alpha="Alpha"))+
+        metR::geom_arrow(pivot=0)+
+      ggplot2::theme_minimal() #+guides(colour=guide_legend(override.aes=list(size=3)))
   }
 }
 

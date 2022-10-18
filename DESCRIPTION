@@ -15,6 +15,7 @@ LinkingTo:
 Imports: 
     ggplot2,
     methods,
+    metR,
     Rcpp,
     RcppEigen,
     rsvd,

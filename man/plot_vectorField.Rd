@@ -4,7 +4,14 @@
 \alias{plot_vectorField}
 \title{Visualization of the vector field embedding}
 \usage{
-plot_vectorField(embedding_mat, colour, alpha = 1, randomize = T)
+plot_vectorField(
+  embedding_mat,
+  colour = 1,
+  alpha = 1,
+  randomize = T,
+  nbin = 50,
+  minNum = 10
+)
 }
 \arguments{
 \item{embedding_mat}{Embedding from the vector field}
@@ -14,6 +21,10 @@ plot_vectorField(embedding_mat, colour, alpha = 1, randomize = T)
 \item{alpha}{alpha}
 
 \item{randomize}{Logical. Whether to randomize data before plotting.}
+
+\item{nbin}{number of bins}
+
+\item{minNum}{minNum}
 }
 \value{
 ggplot2 object
