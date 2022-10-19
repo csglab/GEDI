@@ -20,3 +20,7 @@ Imports:
     RcppEigen,
     rsvd,
     scales
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
