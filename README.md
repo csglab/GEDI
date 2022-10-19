@@ -1,5 +1,7 @@
 # GEDI: Gene expression decomposition and integration
 
+A model that unifies normalization, imputation, integration, and interpretation of single-cell transcriptomics data. 
+
 ## **Dependencies:** 
 
 R dependencies for GEDI:
@@ -29,7 +31,7 @@ devtools::install_github("csglab/GEDI", auth_token="your_personal_access_token")
 ```
 
 
-## **Usage:**  
+## **Usage:**
 
 Load GEDI
 
@@ -73,5 +75,5 @@ model$optimize(itelim) # run model
 
 ```
 
-For a full tutorial, please see the vignettes/run_gedi.html example. 
+For a full tutorial, please see the vignettes/run_gedi.Rmd example. 
 
