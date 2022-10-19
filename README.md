@@ -1,54 +1,42 @@
 # GEDI: Gene expression decomposition and integration
 
-Data and code used to run GEDI on a pbmc data from [https://doi.org/10.1038/s41587-020-0465-8] This data is peripheral mono nuclear cells profiled with single cell RNA seq across different sequencing technologies. We have multiple batches ( each sequencing technology ) for the same set of cell types.
-
-1. process_data.Rmd: Create a Single Cell Experiment Object from a raw count matrix and metadata and obtain most variable genes. 
-2. run_gedi.Rmd : Running GEDI with raw counts and a C matrix. Performs integration, interpretation and imputation of gene expression. 
-
 ## **Dependencies:** 
 
 R dependencies for GEDI:
 
   * Rcpp
   * RcppEigen
-  * quadprog
-  * ClusterR
-  * Matrix
-  * rsvd
   * ggplot2
-  * scales
+  * methods
+  * metR
+  * rsvd
+  * scales	
 
 Note, RcppEigen also needs gfortran to be installed on the system.
 
 Other R dependencies (used for the notebooks):
 
-  * batchelor
   * uwot
   * scran
   * scater
-  * ggrepel
-  * ggrastr
-  * tictoc
-  * pheatmap
-  * viridis
-  * RColorBrewer
+  
+## Installation
 
-## **Data:** 
+```{r}
 
-* raw_counts_initial.rds [ raw counts of pbmcs ]
-* meta_initial.rds [ metadata of pbmcs ]
-* C_matrices/CellMarker.rds [http://bio-bigdata.hrbmu.edu.cn/CellMarker/]
-* C_matrices/C_hallmark_msigdb.rds [ http://www.gsea-msigdb.org/gsea/msigdb/genesets.jsp?collection=C2 ]
-* C_matrices/C_HCL.rds [ https://doi.org/10.1038/s41586-020-2157-4 ]
+devtools::install_github("csglab/GEDI", auth_token="your_personal_access_token")
 
-Note: The original pbmc data contained 2 experiments, pbmc1 and pbmc2. The data for this tutorial comes from pbmc1.
+```
+
 
 ## **Usage:**  
 
-Load GEDI functions
+Load GEDI
 
 ```{r}
-source("gedi/scIntegration.v106.hierarchical_O_si.R") # load GEDI functions
+
+library(GEDI)
+
 ```
 
 #### **Arguments:**
@@ -67,8 +55,9 @@ source("gedi/scIntegration.v106.hierarchical_O_si.R") # load GEDI functions
 
 * C: The gene-level biological prior. If NULL, it means that there is no prior for Z
 * H: Sample-level prior for sources of variation. If NULL, there will be no prior for Qi 
+* oi_shrinkage: Shrinkage multiplier for oi (offset vector per sample i)
 
-For this example, we are going to use GEDI with the raw counts, Bsphere mode and a matrix of cell type markers ( from cellmarker database) as prior biological information.
+For this example, we are going to use GEDI with the raw counts, Bsphere mode and a matrix of cell type markers as prior biological information.
 
 ```{r}
 
@@ -80,15 +69,9 @@ oi_shrinkage<- 0.001
 model <- new("GEDI") # Initialize GEDI object
 model$setup( Samples = sce$Sample, M = raw_counts, C=c_mat, mode = mode, K = K, oi_shrinkage=oi_shrinkage ) # set up parameters
 model$initialize.LVs(randomSeed = 1) # initialize LVs
-tic("Optimization")
 model$optimize(itelim) # run model
-toc()
 
 ```
 
-For a full tutorial, please see the run_gedi.html example. 
-
-## **Formulation:**
-
-To understand GEDI formulation, please refer to the Model.v24.sample_variables.pdf document.
+For a full tutorial, please see the vignettes/run_gedi.html example. 
 
