@@ -1362,14 +1362,21 @@ getDiffExp.gedi <- function( object, contrast, include_O=F ) {
 #' @param object GEDI object
 #' @param start.cond contrast vector for start condition
 #' @param end.cond contrast vector for end condition
-#'
-#' @return list with SVD results ( d, u, v)
+#' @param scale_cond_vector  a scaling factor that will be applied to the length of the vectors in the condition-associated vector field
+#' 
+#' @return list with SVD results ( d, u, v, embedding_indices, vectorField_indices )
 #' @export
 #'
-svd.vectorField.gedi <- function( object, start.cond, end.cond ) {
+svd.vectorField.gedi <- function(
+    object,
+    start.cond,
+    end.cond,
+    scale_cond_vector=1 ) {
   # Calculate the coordinate vectors for the start and end conditions
   startQ <- getDiffQ.gedi( object, start.cond ) + object$params$Z
-  endQ <- getDiffQ.gedi( object, end.cond ) + object$params$Z
+  endQ <- getDiffQ.gedi(
+    object, start.cond+(end.cond-start.cond)*scale_cond_vector ) +
+    object$params$Z
   # Now let's map these vectors onto the Z coordinate system.
   #  In other words, we want to express these vector sets as Z %*% rot, where rot is a
   #  rotation/transformation matrix that needs to be calculated
@@ -1379,7 +1386,7 @@ svd.vectorField.gedi <- function( object, start.cond, end.cond ) {
   rotEndQ <-
     solve(eigenMatCrossprod(object$params$Z,object$params$Z)) %*%
     eigenMatCrossprod(object$params$Z,endQ)
-
+  
   # Now, the start positions of the cells are Z %*% rotStartQ %*% DB, and end positions are Z %*% rotEndQ %*% DB
   #  We will now perform SVD on the concatenation of start and end coordinates
   projDB <- getDB.gedi( object )
@@ -1407,9 +1414,168 @@ svd.vectorField.gedi <- function( object, start.cond, end.cond ) {
   rownames(v) <- c(
     paste0(object$aux$cellIDs,".start"),
     paste0(object$aux$cellIDs,".end") )
-
-  return( list(d=d,u=u,v=v) )
+  
+  return( list(
+    d = d, u = u, v = v,
+    embedding_indices = 1:object$aux$N,
+    vectorField_indices = 1:(2*object$aux$N) ) )
 }
+
+#' Get Activity gradients
+#'
+#' Return the gradient of all pathways 
+#' @param object GEDI object
+#' 
+#' @return gradient
+#' @export
+#' 
+getActivityGradients.gedi <- function( object ) {
+  A <- object$aux$C.rotation %*% object$params$A
+  gradient <- t(A) # gradient is the same as the corresponding row in A
+  # convert the gradient from the Z reference frame to the reference frame of genes
+  gradient <- object$params$Z %*% gradient
+  rownames(gradient) <- object$aux$geneIDs
+  colnames(gradient) <- colnames(object$aux$inputC)
+  return(gradient)
+}
+
+#' SVD activity Gradient
+#'
+#' Calculate the activity gradient
+#' @param object GEDI object
+#' @param C_index the index of the entry in the C matrix whose gradient should be calculated
+#' @param scale_gradient a scaling factor that determines the magnitude of the gradient vectors.  If NA, the scaling factor will be automatically calculated so that the length of the gradient vector is 20% of the mean length of cell embedding vectors in the DB projection.
+#'
+#' @return list with SVD results ( d, u, v, embedding_indices, vectorField_indices )
+#' @export
+svd.activityGradient.gedi <- function(
+    object,
+    C_index,
+    scale_gradient=NA ) {
+  A <- object$aux$C.rotation %*% object$params$A
+  gradient <- A[C_index,] # gradient is the same as the corresponding row in A
+  
+  # Now, the start positions of the cells are Z %*% DB, and end positions are Z %*% (DB+gradient)
+  #  We will now perform SVD on the concatenation of start and end coordinates
+  projDB <- getDB.gedi( object )
+  if( is.na(scale_gradient) ) {
+    scale_gradient <- sqrt( stats::var(c(projDB))/mean(gradient^2) ) * 0.2
+    message(paste0("Gradient vectors will be scaled by a factor of ",scale_gradient,"."))
+  }
+  projDB <- cbind( projDB, projDB+gradient*scale_gradient  )
+  # Perform SVD of Z
+  svd.Z <- svd(
+    object$params$Z,
+    nu=object$aux$K, nv=object$aux$K )
+  # Perform SVD of projDB
+  svd.projDB <- svd(
+    projDB,
+    nu=object$aux$K, nv=object$aux$K )
+  # Perform SVD of the middle SVD matrices
+  svd.middle <- svd(
+    diag(svd.Z$d,nrow=object$aux$K) %*% t(svd.Z$v) %*%
+      svd.projDB$u %*% diag(svd.projDB$d,nrow=object$aux$K),
+    nu=object$aux$K, nv=object$aux$K )
+  # Calculate the SVD of ZDB
+  u <- svd.Z$u %*% svd.middle$u
+  v <- svd.projDB$v %*% svd.middle$v
+  d <- svd.middle$d
+  # Set the dimension names
+  names(d) <- colnames(u) <- colnames(v) <- paste0("LV",1:object$aux$K)
+  rownames(u) <- object$aux$geneIDs
+  rownames(v) <- c(
+    paste0(object$aux$cellIDs,".start"),
+    paste0(object$aux$cellIDs,".end") )
+  
+  return( list(
+    d = d, u = u, v = v,
+    embedding_indices = 1:object$aux$N,
+    gradient_indices = 1:(2*object$aux$N) ) )
+}
+
+#' SVD joint vector Field gradient
+#'
+#' create a umap embedding for cells and their joint vector fields both for sample condition and for pathway activity gradient
+#' @param object GEDI object
+#' @param start.cond contrast vector for start condition
+#' @param end.cond contrast vector for end condition
+#' @param C_index the index of the entry in the C matrix whose gradient should be calculated.
+#' @param scale_cond_vector a scaling factor that will be applied to the length of the vectors in the condition-associated vector field
+#' @param scale_gradient a scaling factor that determines the magnitude of the gradient vectors. If NA, the scaling factor will be automatically calculated so that the length of the gradient vector is 20% of the mean length of cell embedding vectors in the DB projection.
+#'
+#' @return list with SVD results ( d, u, v, embedding_indices, vectorField_indices, gradient_indices )
+#'
+#' @export
+#' 
+svd.joint_vectorField_gradient.gedi <- function(
+    object,
+    start.cond,
+    end.cond,
+    C_index,
+    scale_cond_vector=1,
+    scale_gradient=NA ) {
+  A <- object$aux$C.rotation %*% object$params$A
+  gradient <- A[C_index,] # gradient is the same as the corresponding row in A
+  # Calculate the coordinate vectors for the start and end conditions
+  startQ <- getDiffQ.gedi( object, start.cond ) + object$params$Z
+  endQ <- getDiffQ.gedi(
+    object, start.cond+(end.cond-start.cond)*scale_cond_vector ) +
+    object$params$Z
+  # Now let's map these vectors onto the Z coordinate system.
+  #  In other words, we want to express these vector sets as Z %*% rot, where rot is a
+  #  rotation/transformation matrix that needs to be calculated
+  rotStartQ <-
+    solve(eigenMatCrossprod(object$params$Z,object$params$Z)) %*%
+    eigenMatCrossprod(object$params$Z,startQ)
+  rotEndQ <-
+    solve(eigenMatCrossprod(object$params$Z,object$params$Z)) %*%
+    eigenMatCrossprod(object$params$Z,endQ)
+  
+  # Now, the start positions of the cells are Z %*% rotStartQ %*% DB, and end positions are Z %*% rotEndQ %*% DB
+  #  We will now perform SVD on the concatenation of start and end coordinates
+  projDB <- getDB.gedi( object )
+  if( is.na(scale_gradient) ) {
+    scale_gradient <- sqrt( stats::var(c(projDB))/mean(gradient^2) ) * 0.2
+    message(paste0("Gradient vectors will be scaled by a factor of ",scale_gradient,"."))
+  }
+  
+  projDB <- cbind(
+    rotStartQ %*% projDB,
+    rotEndQ %*% projDB,
+    rotStartQ %*% (projDB+gradient*scale_gradient)  )
+  # Perform SVD of Z
+  svd.Z <- svd(
+    object$params$Z,
+    nu=object$aux$K, nv=object$aux$K )
+  # Perform SVD of projDB
+  svd.projDB <- svd(
+    projDB,
+    nu=object$aux$K, nv=object$aux$K )
+  # Perform SVD of the middle SVD matrices
+  svd.middle <- svd(
+    diag(svd.Z$d,nrow=object$aux$K) %*% t(svd.Z$v) %*%
+      svd.projDB$u %*% diag(svd.projDB$d,nrow=object$aux$K),
+    nu=object$aux$K, nv=object$aux$K )
+  # Calculate the SVD of ZDB
+  u <- svd.Z$u %*% svd.middle$u
+  v <- svd.projDB$v %*% svd.middle$v
+  d <- svd.middle$d
+  # Set the dimension names
+  names(d) <- colnames(u) <- colnames(v) <- paste0("LV",1:object$aux$K)
+  rownames(u) <- object$aux$geneIDs
+  rownames(v) <- c(
+    paste0(object$aux$cellIDs,".start"),
+    paste0(object$aux$cellIDs,".condEnd"),
+    paste0(object$aux$cellIDs,".gradEnd") )
+  
+  return( list(
+    d = d, u = u, v = v,
+    embedding_indices = 1:object$aux$N,
+    vectorField_indices = 1:(2*object$aux$N),
+    gradient_indices = c(1:object$aux$N,(2*object$aux$N+1):(3*object$aux$N)) ) )
+  
+}
+
 
 #' Visualization of the vector field embedding
 #'

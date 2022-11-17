@@ -4,7 +4,7 @@
 \alias{svd.vectorField.gedi}
 \title{SVD for vector fields}
 \usage{
-svd.vectorField.gedi(object, start.cond, end.cond)
+svd.vectorField.gedi(object, start.cond, end.cond, scale_cond_vector = 1)
 }
 \arguments{
 \item{object}{GEDI object}
@@ -12,9 +12,11 @@ svd.vectorField.gedi(object, start.cond, end.cond)
 \item{start.cond}{contrast vector for start condition}
 
 \item{end.cond}{contrast vector for end condition}
+
+\item{scale_cond_vector}{a scaling factor that will be applied to the length of the vectors in the condition-associated vector field}
 }
 \value{
-list with SVD results ( d, u, v)
+list with SVD results ( d, u, v, embedding_indices, vectorField_indices )
 }
 \description{
 Calculate svd for cells and their vector fields.
