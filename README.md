@@ -78,4 +78,4 @@ For a full tutorial, please see the vignettes/run_gedi.Rmd example.
 
 #### Reproducible analyses for the manuscript
 
-Notebooks with reproducible analyses for the GEDI manuscript can be found [here](https://github.com/csglab/GEDI_manuscript)
+Notebooks with reproducible analyses for the GEDI manuscript can be found [here](https://github.com/csglab/GEDI_manuscript).
