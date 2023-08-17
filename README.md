@@ -26,7 +26,7 @@ Other R dependencies (used for the notebooks):
 
 ```{r}
 
-devtools::install_github("csglab/GEDI", auth_token="your_personal_access_token")
+devtools::install_github("csglab/GEDI")
 
 ```
 
@@ -66,10 +66,9 @@ For this example, we are going to use GEDI with the raw counts, Bsphere mode and
 K<- 100
 itelim <- 150
 mode <- "Bsphere"
-oi_shrinkage<- 0.001
 
 model <- new("GEDI") # Initialize GEDI object
-model$setup( Samples = sce$Sample, M = raw_counts, C=c_mat, mode = mode, K = K, oi_shrinkage=oi_shrinkage ) # set up parameters
+model$setup( Samples = sce$Sample, M = raw_counts, C=c_mat, mode = mode, K = K ) # set up parameters
 model$initialize.LVs(randomSeed = 1) # initialize LVs
 model$optimize(itelim) # run model
 
@@ -77,3 +76,6 @@ model$optimize(itelim) # run model
 
 For a full tutorial, please see the vignettes/run_gedi.Rmd example. 
 
+#### Reproducible analyses for the manuscript
+
+Notebooks with reproducible analyses for the GEDI manuscript can be found [here](https://github.com/csglab/GEDI_manuscript)
