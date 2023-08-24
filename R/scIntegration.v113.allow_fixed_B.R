@@ -31,7 +31,7 @@ setRefClass(
       C = NULL, # The gene-level biological prior. If NULL, it means that there is no prior for Z
       H = NULL, # The sample-level prior for sources of variation. If NULL, there will be no prior for Qi. Must be a matrix with column names corresponding to sample names
       K = 10, # The number of latent variables
-      mode = "Bl2", # Three values are allowed: "BL2" [L2 norm of the entire B matrix is fixed], or "Bsphere" [L2 norms of B columns are fixed]
+      mode = "Bsphere", # Two values are allowed: "Bl2" [L2 norm of the entire B matrix is fixed], or "Bsphere" [L2 norms of B columns are fixed]
       adjustD = T, # Whether D should be adjusted based on the L2 norm of B rows (TRUE), or just use the default (FALSE)
       orthoZ = T, # Whether the columns of Z should be orthogonal
       Z_shrinkage = 1, # The shrinkage multiplier for Z
@@ -1668,11 +1668,13 @@ plot_vectorField <- function(embedding_mat,colour=1,alpha=1,randomize=T,nbin=50,
 #' @param embedding_mat Embedding
 #' @param colour vector of variable to plot
 #' @param randomize Logical. Whether to randomize data before plotting.
-#'
+#' @param size_point Numeric. Dot size
+#' @param size_guide_legend Numeric. Legend size
+#' 
 #' @return ggplot2 object
 #' @export
 #'
-plot_embedding <- function(embedding_mat,colour,randomize=T) {
+plot_embedding <- function(embedding_mat,colour,randomize=T, size_point=2, size_guide_legend=3) {
   # create a data frame that will have the embedding as well as the colors
   embedding_obj <- data.frame(
     Dim1=embedding_mat[,1],
@@ -1690,15 +1692,15 @@ plot_embedding <- function(embedding_mat,colour,randomize=T) {
     lim <- stats::quantile(abs(embedding_obj$Var),0.99)
     ggplot2::ggplot(
       embedding_obj, ggplot2::aes_string( x="Dim1", y="Dim2", colour="Var"))+
-      ggplot2::geom_point(size=0.05)+
+      ggplot2::geom_point(size=size_point)+
       ggplot2::theme_minimal()+
       ggplot2::scale_color_gradientn( limits=c(-lim,lim), colours=c("blue","light grey","red"), oob=scales::squish )
   } else {
     ggplot2::ggplot(
       embedding_obj, ggplot2::aes_string( x="Dim1", y="Dim2", colour="Var"))+
-      ggplot2::geom_point(size=0.05)+
+      ggplot2::geom_point(size=size_point)+
       ggplot2::theme_minimal()+
-      ggplot2::guides(colour=ggplot2::guide_legend(override.aes=list(size=3)))
+      ggplot2::guides(colour=ggplot2::guide_legend(override.aes=list(size=size_guide_legend)))
 
   }
 }
