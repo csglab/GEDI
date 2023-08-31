@@ -1674,7 +1674,7 @@ plot_vectorField <- function(embedding_mat,colour=1,alpha=1,randomize=T,nbin=50,
 #' @return ggplot2 object
 #' @export
 #'
-plot_embedding <- function(embedding_mat,colour,randomize=T, size_point=2, size_guide_legend=3) {
+plot_embedding <- function(embedding_mat,colour,randomize=T, size_point=0.05, size_guide_legend=3) {
   # create a data frame that will have the embedding as well as the colors
   embedding_obj <- data.frame(
     Dim1=embedding_mat[,1],
