@@ -1,6 +1,21 @@
 # GEDI: Gene expression decomposition and integration
 
-A model that unifies normalization, imputation, integration, and interpretation of single-cell transcriptomics data. 
+## Content
+
+- [Overview](#Overview)
+- [System Requirements](#System-requirements)
+- [Installation](#Installation)
+- [Usage](#instructions-for-use)
+- [License](./LICENSE.md)
+- [Issues](https://github.com/csglab/GEDI/issues)
+- [Pre-print](https://www.biorxiv.org/content/10.1101/2023.08.15.553327v1)
+- [Reproducible analysis for manuscript](https://github.com/csglab/GEDI_manuscript)
+
+# Overview
+
+A generative model that unifies integration, cluster-free differential expression, pathway and regulatory network analysis,  data normalization and imputation. 
+
+# System Requirements
 
 ## **Dependencies:** 
 
@@ -21,17 +36,18 @@ Other R dependencies (used for the notebooks):
   * uwot
   * scran
   * scater
-  
-## Installation
+
+# Installation
+
+From an R session `R` session, type:
 
 ```{r}
 
 devtools::install_github("csglab/GEDI")
 
 ```
-
-
-## **Usage:**
+  
+# **Usage:**
 
 Load GEDI
 
@@ -73,9 +89,3 @@ model$initialize.LVs(randomSeed = 1) # initialize LVs
 model$optimize(itelim) # run model
 
 ```
-
-For a full tutorial, please see the vignettes/run_gedi.Rmd example. 
-
-#### Reproducible analyses for the manuscript
-
-Notebooks with reproducible analyses for the GEDI manuscript can be found [here](https://github.com/csglab/GEDI_manuscript).
