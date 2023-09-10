@@ -3,89 +3,60 @@
 ## Content
 
 - [Overview](#Overview)
-- [System Requirements](#System-requirements)
+- [Requirements](#Requirements)
 - [Installation](#Installation)
-- [Usage](#instructions-for-use)
+- [Usage](#Usage)
 - [License](./LICENSE.md)
-- [Issues](https://github.com/csglab/GEDI/issues)
-- [Pre-print](https://www.biorxiv.org/content/10.1101/2023.08.15.553327v1)
+- [Preprint](#Preprint)
 - [Reproducible analysis for manuscript](https://github.com/csglab/GEDI_manuscript)
+- [Contact](#Contact)
 
 # Overview
 
-A generative model that unifies integration, cluster-free differential expression, pathway and regulatory network analysis,  data normalization and imputation. 
+A generative model that unifies integration, cluster-free differential expression, pathway and regulatory network analysis, data normalization and imputation. 
 
-# System Requirements
+# Requirements
 
-## **Dependencies:** 
+The following R packages are required: 
 
-R dependencies for GEDI:
+  * [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html)
+  * [RcppEigen](https://cran.r-project.org/web/packages/RcppEigen/index.html)
+  * [ggplot2](https://cran.r-project.org/web/packages/ggplot2/index.html)
+  * [metR](https://cran.r-project.org/web/packages/metR/index.html)
+  * [rsvd](https://cran.r-project.org/web/packages/rsvd/index.html)
+  * [scales](https://cran.r-project.org/web/packages/scales/index.html)
 
-  * Rcpp
-  * RcppEigen
-  * ggplot2
-  * methods
-  * metR
-  * rsvd
-  * scales	
-
-Note, RcppEigen also needs gfortran to be installed on the system.
+Note, RcppEigen also needs [gfortran](https://fortran-lang.org/learn/os_setup/install_gfortran/) to be installed on the system.
 
 Other R dependencies (used for the notebooks):
 
-  * uwot
-  * scran
-  * scater
+  * [uwot](https://cran.r-project.org/web/packages/uwot/index.html)
+  * [scran](https://bioconductor.org/packages/release/bioc/html/scran.html)
+  * [scater](https://bioconductor.org/packages/release/bioc/html/scater.html)
+  
+The code was tested using R 4.0.0 running on CentOS Linux 7.
+
+`GEDI` should be compatible with Windows, Mac, and Linux operating systems.
 
 # Installation
 
-From an R session `R` session, type:
+From an `R` session, type:
 
 ```{r}
-
 devtools::install_github("csglab/GEDI")
-
 ```
   
-# **Usage:**
+# Usage
 
-Load GEDI
+Check the following notebooks for examples on how to run GEDI: 
 
-```{r}
+* Quick intro
+* Analysis of sample to sample variability
 
-library(GEDI)
+# Preprint
 
-```
+[Madrigal, A., Lu, T., Soto, L. M., & Najafabadi, H. S. (2023). A unified model for interpretable latent embedding of multi-sample, multi-condition single-cell data. bioRxiv, 2023-08.](https://www.biorxiv.org/content/10.1101/2023.08.15.553327v1)
 
-#### **Arguments:**
+# Contact
 
-* Samples:  Batch variable to use. It should be a character vector.
-* expression matrix: Could be one of the following:
-	+ Y: The log-transformed (and possibly normalized) gene expression matrix.
-	+ M: The raw read count matrix.  It can also be a list of two matrices, in which case they are considered as paired observations whose log-ratio must be modelled.
-* K: The number of latent variables.
-* mode: Two values are allowed: 
-	+ Bl2: L2 norm of the entire B matrix is fixed. Interpretation is that we’re projecting the data on a lower-dimensional hyperplane with dimension K. 
-	+ Bsphere: L2 norms of B columns are fixed. Interpretation is that we’re projecting the data on a hyperellipsoid of dimension K. 	
-* itelim: Number of iterations for optimization.
-
-**Optional arguments**:
-
-* C: The gene-level biological prior. If NULL, it means that there is no prior for Z
-* H: Sample-level prior for sources of variation. If NULL, there will be no prior for Qi 
-* oi_shrinkage: Shrinkage multiplier for oi (offset vector per sample i)
-
-For this example, we are going to use GEDI with the raw counts, Bsphere mode and a matrix of cell type markers as prior biological information.
-
-```{r}
-
-K<- 100
-itelim <- 150
-mode <- "Bsphere"
-
-model <- new("GEDI") # Initialize GEDI object
-model$setup( Samples = sce$Sample, M = raw_counts, C=c_mat, mode = mode, K = K ) # set up parameters
-model$initialize.LVs(randomSeed = 1) # initialize LVs
-model$optimize(itelim) # run model
-
-```
+We use GitHub [issues](https://github.com/csglab/GEDI/issues) for tracking requests and bugs. Please submit a new issue if you have any comment or you would like to report a software bug. 
