@@ -48,10 +48,10 @@ devtools::install_github("csglab/GEDI")
   
 # Usage
 
-Check the following notebooks for examples on how to run GEDI: 
+Check the following notebooks for examples on how to run `GEDI`: 
 
-* Quick intro
-* Analysis of sample to sample variability
+* [Quick intro](https://htmlpreview.github.io/?https://github.com/csglab/GEDI/blob/main/vignettes/GEDI_quick.nb.html)
+* [Analysis of sample to sample variability](https://htmlpreview.github.io/?https://github.com/csglab/GEDI/blob/main/vignettes/GEDI_sample_PBMC.nb.html)
 
 # Preprint
 
