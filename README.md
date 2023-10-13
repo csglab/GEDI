@@ -53,6 +53,7 @@ Check the following notebooks for examples on how to run `GEDI`:
 * [Quick intro](https://csglab.github.io/GEDI/vignettes/GEDI_quick.html)
 * [Analysis of sample to sample variability](https://csglab.github.io/GEDI/vignettes/GEDI_sample_PBMC.html)
 * [TF analysis in PBMC](https://csglab.github.io/GEDI/vignettes/GEDI_tf_analysis_PBMC.html)
+* [Ratio mode: splicing](https://csglab.github.io/GEDI/vignettes/GEDI_splicing.html)
 
 # Preprint
 
