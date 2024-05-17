@@ -1,0 +1,239 @@
+---
+title: "GEDI: TF analysis"
+output:
+ html_document:
+  df_print: paged
+  code_folding: show
+  toc: yes
+  toc_float:
+   collapsed: false
+   smooth_scroll: false
+---
+
+In this tutorial, we are going to estimate the activity of various transcription factors (TFs) using the PBMC data from this [publication](https://www.nature.com/articles/s41587-020-0465-8). This is a collection of immune cell types profiled from peripherial blood from two human donors across six single-cell RNA-seq technologies (10x Chromimum v2 and v3, CEL-seq2, Drop-seq, inDrops, Seq-Well and Smart-seq2).
+
+# 01 - Pre-processing
+
+## Load libraries
+
+```{r, message=FALSE}
+library(scuttle)
+library(scran)
+library(scater)
+library(uwot)
+library(SingleCellExperiment)
+library(ggplot2)
+library(HDF5Array)
+library(pheatmap)
+library(GEDI)
+set.seed(43)
+```
+
+## Downloading data
+
+The raw count matrices and metadata are available through the SeuratData package:
+```{r, eval=FALSE}
+library(SeuratData)
+InstallData("pbmcsca") # Install pbmcsca object
+data("pbmcsca") # Load the Seurat Object
+```
+
+We will generate a Single Cell Experiment (SCE) Object. 
+```{r, eval=FALSE}
+meta<- pbmcsca[[]] # Obtaining metadata
+meta$Barcode<- rownames(meta) # Naming Barcode
+sce<- SingleCellExperiment(list(counts=Seurat::GetAssayData(object = pbmcsca, slot = "counts")), colData=meta) # create SCE
+sce
+```
+
+## Quality control steps
+
+We will perform basic QC steps using the scuttle library.
+```{r, eval=FALSE}
+sce<- addPerCellQC(sce, subsets=list(Mito=grep("MT-", rownames(sce) )) )
+sce$log10_total_counts<- log10(sce$sum)
+sce$log10_total_features_by_counts<- log10(sce$detected)
+```
+In our case, we already have a SingleCellExperiment created, which we will upload. Instructions on how to download the data can be found in [here](https://csglab.github.io/GEDI_manuscript/notebooks/download_pbmc.html).
+
+```{r, message=FALSE}
+sce<- loadHDF5SummarizedExperiment(dir="./my_h5_se")
+sce$subsets_Mito_percent<- sce$pct_counts_mito # Renaming so it's concordant with addPerCellQC
+```
+
+Visualize the quality of the data
+```{r, fig.width=9, fig.height=7}
+ggplot(data.frame(colData(sce)), aes(log10_total_counts, log10_total_features_by_counts,color=subsets_Mito_percent ) )+
+    geom_point(size=0.5) +    
+    viridis::scale_color_viridis() +
+    facet_wrap(~sce$Method)
+```
+Filtering low-quality cells
+```{r}
+filter<- sce$log10_total_counts > 2.5 &
+    sce$log10_total_features_by_counts > 2 &
+    sce$subsets_Mito_percent <= 20
+sce<- sce[,filter]
+```
+Filtering low-expressed genes
+```{r}
+# We kept genes that had more than 5 counts in more than 3 cells across the entire dataset
+sum_genes<- rowSums(assay(sce, "counts")>5)
+genes_use<- sum_genes>3
+table(genes_use)
+genes_use<- names(which(genes_use))
+
+# Filtering SCE
+sce<- sce[genes_use,]
+sce
+```
+
+## Loading prior biological information
+
+For the analysis of transcription factor (TF) networks, we downloaded the human [DoRothEA](https://saezlab.github.io/dorothea/) gene regulatory network and restricted the TF-gene interactions to the high-confidence sets A, B, and C. We then refined this TF-gene interaction matrix, using the whole blood data from GTEx and generated a weighted regulatory network. You can download this matrix from [here](https://github.com/csglab/GEDI_manuscript/tree/main/C_matrices).
+
+```{r}
+# Read C matrix
+C<- readRDS("C_dorothea_tf_human.refined.rds")
+dim(C)
+head(C[,15:25])
+```
+C is a weigthed regulatory network with regulated genes in the rows and TFs in the columns.
+
+# 02 - Run GEDI
+
+## Setting up input matrices
+
+First, we need to indicate a vector of samples. We will create a vector that indicates each sample, which in this case is a combination of the donor and single-cell technology used. 
+
+```{r}
+sce$donor_sample<- paste0(sce$orig.ident, ".", sce$Method)
+meta<- data.frame(colData(sce))
+```
+
+**IMPORTANT:** The vector of samples (and potentially the metadata) needs to be in the same order as the gene expression matrix. 
+
+We will run GEDI using the raw counts, which need to be passed as a sparse Matrix.
+```{r}
+# Accesing the raw counts in the SCE object and convert to a sparse Matrix format
+raw_counts<- as(as.matrix(assay(sce, "counts")), "dgCMatrix")
+```
+**IMPORTANT:** Now, we need to prepare our matrix of prior information. First, it needs to include the same genes of the gene expression matrix (and be in the same order). Also, we need to remove any columns from the C matrix that result in singularity. 
+```{r}
+commongenes<- intersect(rownames(C), rownames(raw_counts) )
+C<- C[commongenes,]
+raw_counts<- raw_counts[commongenes,]
+dim(raw_counts)
+```
+We now remove any columns that result in singularity from the C matrix.
+```{r}
+QR <- qr(crossprod(C))
+C <- C[ , QR$pivot[seq_len(QR$rank)] ] # remove any columns that results in singularity
+dim(C) 
+head(C[, 15:25])
+```
+
+## Set up GEDI object
+
+Now, we are ready to run GEDI. These are the main arguments: 
+
+* Samples: Batch variable to use. It should be a character vector indicating which sample belongs to each cell.
+* Expression matrix: Could be one of the following:
+	+ Y: The log-transformed (and possibly normalized) gene expression matrix.
+	+ M: The raw read count matrix, which needs to be in the sparse format. It can also be a list of two matrices, in which case they are considered as paired observations whose log-ratio must be modelled.
+* K: The number of latent variables.
+* mode: Two values are allowed: 
+	+ Bsphere: L2 norms of B columns are fixed. Interpretation is that we’re projecting the data on a hyperellipsoid of dimension K.
+	+ Bl2: L2 norm of the entire B matrix is fixed. Interpretation is that we’re projecting the data on a lower-dimensional hyperplane with dimension K.
+* itelim: Number of iterations for optimization.
+
+**Optional arguments**:
+
+* C: The gene-level biological prior. If NULL, it means that there is no prior information for Z.
+* H: Sample-level prior for sources of variation. If NULL, there will be no prior for Qi.
+* oi_shrinkage: Shrinkage multiplier for oi (offset vector per sample i).
+
+For this example, we are going to use GEDI with the raw counts and the Bsphere mode.
+
+**NOTE**: With this dataset(~1K genes and ~28K cells), this step might take ~1 hour.
+
+```{r, eval=F}
+## Set up GEDI model
+model <- new("GEDI") # Initialize GEDI object
+model$setup(Samples = sce$donor_sample, # Vector indicating which sample belongs to each cell
+            colData=meta, # Metadata (optional)
+            M = raw_counts, # Expression data
+            C = C, # Gene level prior information
+            K = 40, # Number of latent variables to use
+            mode = "Bsphere", # Modes to use: Either Bsphere (hyperellipsoid) or Bl2 (hyperplane)
+            oi_shrinkage = 0.001 # Shrinkage multiplier for oi. In here we use 0.001, to better accommodated the mean abundance differences that exist between multiple scRNA-seq technologies.
+            ) 
+model$initialize.LVs(randomSeed = 1) # initialize LVs
+model$optimize(iterations=500) # run model with 500 iterations
+saveRDS( model, file="pbmc_gedi_model_bothDonors.rds") # Saving output model
+```
+
+The output GEDI model for this tutorial can also be accessed in [here](https://zenodo.org/record/8222698). 
+
+```{r, include=FALSE}
+model<- readRDS("pbmc_gedi_model_bothDonors_TF.rds")
+```
+
+We check convergence of the GEDI model. 
+```{r}
+model$plotTracking()
+```
+
+These plots show the convergence of the different components of the model (o, Z, A, Bi, Qi, oi and si). The last plot shows the convergence of the mean squared error of the model. 
+
+
+**IMPORTANT:** GEDI reorders the cells by sample, so we need to reorder the original metadata. 
+```{r}
+# Reorder meta
+meta<- meta[model$aux$cellIDs,]
+sce<- sce[,rownames(meta)]
+```
+
+# 03 - Visualize integration results
+
+After running the model, we can recover the integrated reference space. 
+```{r, fig.width=7, fig.height=7}
+# Generating svd
+svd_res <- svd.gedi( model )
+embedding_res_svd<- svd_res$v %*% diag(svd_res$d)
+colnames(embedding_res_svd)<- paste0("embedding", 1:ncol(embedding_res_svd))
+
+# Generating umap of 2 dimensions
+umap_2_res <- umap(embedding_res_svd, min_dist=0.01, metric="euclidean")
+colnames(umap_2_res)<- paste0("umap", 1:2)
+rownames(umap_2_res)<- model$aux$cellIDs
+umap_2_res<- data.frame(umap_2_res)
+
+## Plot embeddings
+GEDI::plot_embedding( umap_2_res, meta$donor_sample) + labs(x="umap1", y="umap2", title="UMAP (integration with GEDI)", color="Sample")
+GEDI::plot_embedding( umap_2_res, meta$CellType) + labs(x="umap1", y="umap2", title="UMAP (integration with GEDI)", color="Cell Type")
+```
+
+We observe clear separation between the cell types without any obvious separation by the single-cell technology. 
+
+# 04 - Retrieve TF activities 
+
+We can retrieve the activities from the GEDI model.
+```{r}
+A<- GEDI::getA.gedi(model) # Activity x LVs
+dim(A)
+head(A[,1:5])
+
+ADB<- GEDI::getADB.gedi(model) # Activity x cell
+dim(ADB)
+head(ADB[,1:5])
+```
+We can project the activities of different TFs that are cell type specific.
+```{r, fig.width=7, fig.height=7}
+GEDI::plot_embedding( umap_2_res, ADB["PAX5",]) + labs(x="umap1", y="umap2", title="Activity of PAX5", color="Activity")
+GEDI::plot_embedding( umap_2_res, ADB["TCF7",]) + labs(x="umap1", y="umap2", title="Activity of TCF7", color="Activity")
+```
+```{r}
+sessionInfo()
+```
+
