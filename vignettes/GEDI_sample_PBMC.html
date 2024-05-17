@@ -297,6 +297,8 @@ sce</code></pre>
 sce$log10_total_counts&lt;- log10(sce$sum)
 sce$log10_total_features_by_counts&lt;- log10(sce$detected)</code></pre>
 <p>In our case, we already have a SingleCellExperiment created, which we will upload.Instructions on how to download the data can be found in <a href="https://csglab.github.io/GEDI_manuscript/notebooks/download_pbmc.html">here</a>.</p>
+<pre class="r"><code>sce&lt;- loadHDF5SummarizedExperiment(dir=&quot;./my_h5_se&quot;)
+sce$subsets_Mito_percent&lt;- sce$pct_counts_mito # Renaming so it's concordant with addPerCellQC</code></pre>
 <p>Visualize the quality of the data</p>
 <pre class="r"><code>ggplot(data.frame(colData(sce)), aes(log10_total_counts, log10_total_features_by_counts,color=subsets_Mito_percent ) )+
     geom_point(size=0.5) +    

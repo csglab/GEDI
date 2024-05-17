@@ -55,7 +55,7 @@ sce$log10_total_features_by_counts<- log10(sce$detected)
 ```
 In our case, we already have a SingleCellExperiment created, which we will upload.Instructions on how to download the data can be found in [here](https://csglab.github.io/GEDI_manuscript/notebooks/download_pbmc.html). 
 
-```{r, include=FALSE, message=FALSE}
+```{r, message=FALSE}
 sce<- loadHDF5SummarizedExperiment(dir="./my_h5_se")
 sce$subsets_Mito_percent<- sce$pct_counts_mito # Renaming so it's concordant with addPerCellQC
 ```
