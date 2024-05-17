@@ -1,0 +1,201 @@
+---
+title: "GEDI ratio mode: Splicing"
+output:
+ html_document:
+  df_print: paged
+  code_folding: show
+  toc: yes
+  toc_float:
+   collapsed: false
+   smooth_scroll: false
+---
+
+In this tutorial, we are going to introduce splicing analysis using GEDI in the ratio mode, focused on performing exon-skipping event analysis. We will be using the data derived from two studies: [Tasic 2016](https://www.nature.com/articles/nn.4216) and [Tasic 2018](https://www.nature.com/articles/s41586-018-0654-5). These two studies profiled neocortex tissue in adult mice using full-length single-cell sequencing protocols (SMARTer and SMART-seq). 
+
+# 01 - Pre-processing
+
+## Load libraries
+
+```{r, message=FALSE}
+library(HDF5Array)
+library(ggplot2)
+library(Matrix)
+library(RColorBrewer)
+library(uwot)
+library(GEDI)
+set.seed(43)
+```
+
+## Loading data
+
+To run GEDI in this mode, we need two types of observations for each exon skipping event:
+
+* 1. The number of reads that support an exon inclusion event. 
+* 2. The number of reads that support an exon exclusion event. 
+
+In this case, the data has been processed using the [Quantas pipeline](https://zhanglab.c2b2.columbia.edu/index.php/Quantas_Documentation), which generated two types of observations for each exon skipping event. They are stored as M1(inclusion) and M2(exclusion) in our SingleCell Experiment Object.
+
+We can load the data.
+```{r, message=FALSE}
+sce<- loadHDF5SummarizedExperiment(dir="./my_h5_se")
+sce
+```
+
+We access the exon inclusion and exclusion events. 
+```{r}
+meta<- data.frame(colData(sce)) # Metadata
+M1<- assay(sce, "raw_M1") # inclusion counts
+M2<- assay(sce, "raw_M2") # exclusion counts
+head(M1[,1:10])
+head(M2[,1:10])
+```
+
+M1 (inclusion) and M2 (exclusion) are matrices that have the exon skipping events in the rows and cells in the columns. 
+
+## Filter cells and genes
+
+We filter cells that have low number of inclusion and exclusion counts
+```{r}
+# Filter cels
+filter<- which(log10(colSums(M1)) > 4.5 & log10(colSums(M2)) > 4)
+length(filter)
+M1<- M1[,filter]
+M2<- M2[,filter]
+```
+
+Now, we filter low-expressed events. We keep events that have more than 50 exon inclusion counts and more than 50 exon exclusion counts across the entire dataset.
+
+```{r}
+# Filter events
+filter <- which( rowSums(M1) > 50 & rowSums(M2) > 50 ) # Filter events 
+length(filter)
+M1<- M1[filter,]
+M2<- M2[filter,]
+```
+
+We can plot the distribution of the total number of events per cell after filtering
+```{r}
+hist(log10(colSums(M1)), main="Total number of exon inclusion counts", xlab="")
+hist(log10(colSums(M2)), main="Total number of exon exclusion counts", xlab="")
+```
+
+# 02 - Run GEDI
+
+After pre-processing, we are ready to run GEDI. First, we need to indicate a vector of samples. In this case, each sample represents all the cells that come from one study.
+```{r}
+meta<- meta[colnames(M1),]
+table(meta$Sample)
+```
+
+**IMPORTANT:** The vector of samples (and potentially the metadata) needs to be in the same order as the gene expression matrices M1 and M2. 
+
+We will run GEDI using both inclusion and exclusion count matrices. They need to be passed as sparse Matrix objects.
+```{r}
+# Convert to a sparse Matrix format
+M1<- as(as.matrix(M1), "dgCMatrix")
+M2<- as(as.matrix(M2), "dgCMatrix")
+```
+Now, we are ready to run GEDI. These are the main arguments: 
+
+* Samples: It should be a character vector indicating which sample belongs to each cell.
+* Expression matrix: Could be one of the following:
+	+ Y: The log-transformed (and possibly normalized) gene expression matrix.
+	+ M: The raw read count matrix, which needs to be in the sparse format. It can also be a list of two matrices, in which case they are considered as paired observations whose log-ratio must be modelled.
+* K: The number of latent variables.
+* mode: Two values are allowed: 
+	+ Bsphere: L2 norms of B columns are fixed. Interpretation is that we’re projecting the data on a hyperellipsoid of dimension K.
+	+ Bl2: L2 norm of the entire B matrix is fixed. Interpretation is that we’re projecting the data on a lower-dimensional hyperplane with dimension K.
+* itelim: Number of iterations for optimization.
+
+**Optional arguments**:
+
+* C: The gene-level biological prior. If NULL, it means that there is no prior information for Z.
+* H: Sample-level prior for sources of variation. If NULL, there will be no prior for Qi.
+* oi_shrinkage: Shrinkage multiplier for oi (offset vector per sample i).
+
+For this example, we are going to use GEDI with the inclusion and exclusion raw counts and the Bsphere mode.
+
+**NOTE**: With this complete dataset(~15K genes and ~25K cells), this step might take several hours, so it is recommended to run this using a high-performance computing cluster.
+
+```{r, fig.width=7, fig.height=7, eval=F}
+## Set up GEDI model
+model <- new("GEDI") # Initialize GEDI object
+model$setup(Samples = meta$Sample, # Vector indicating which sample belongs to each cell
+            colData=meta, # Metadata (optional)
+            M = list(M1,M2), # Expression data as a list of two matrices, in which case they are considered as paired observations whose log-ratio must be modelled.
+            K = 20, # Number of latent variables to use
+            mode = "Bsphere", # Modes to use: Either Bsphere (hyperellipsoid) or Bl2 (hyperplane)
+            oi_shrinkage = 0.001 # Shrinkage multiplier for oi. In here we use 0.001, to better accommodated the mean abundance differences that exist between multiple scRNA-seq technologies.
+            ) 
+model$initialize.LVs(randomSeed = 1) # initialize LVs
+model$optimize(iterations=150) # run model with 150 iterations
+saveRDS( model, file="Tasic_gedi_model.rds") # Saving output model
+```
+The output GEDI model for this tutorial can also be accessed in [here](https://zenodo.org/record/8222698/).
+
+```{r, include=FALSE}
+model<- readRDS("Tasic_gedi_model.rds")
+```
+
+We check convergence of the GEDI model. 
+```{r}
+model$plotTracking()
+```
+
+These plots show the convergence of the different components of the model (o, Z, Bi, Qi, oi and si). The last plot shows the convergence of the mean squared error of the model. 
+
+**IMPORTANT:** GEDI reorders the cells by sample, so we need to reorder the original metadata. 
+```{r}
+# Reorder meta
+meta<- meta[model$aux$cellIDs,] 
+```
+
+# 03 - Visualize integration resuts
+
+After running the model, we can recover the integrated reference space.
+
+```{r, fig.width=7, fig.height=7}
+# Generating svd
+svd_res <- svd.gedi( model )
+embedding_res_svd<- svd_res$v %*% diag(svd_res$d)
+colnames(embedding_res_svd)<- paste0("embedding", 1:ncol(embedding_res_svd))
+
+# Generating umap of 2 dimensions
+umap_2_res <- umap(embedding_res_svd, min_dist=0.01, metric="euclidean")
+colnames(umap_2_res)<- paste0("umap", 1:2)
+rownames(umap_2_res)<- model$aux$cellIDs
+umap_2_res<- data.frame(umap_2_res)
+
+## Plot embeddings
+GEDI::plot_embedding( umap_2_res, meta$Sample) + labs(x="umap1", y="umap2", title="UMAP (integration with GEDI)", color="Sample")
+GEDI::plot_embedding( umap_2_res, meta$major_cell_type) + labs(x="umap1", y="umap2", title="UMAP (integration with GEDI)", color="Cell Type")
+```
+
+Also, we can recover the imputed logit(PSI) from the GEDI model.
+
+```{r}
+imputedY<- GEDI::getY.gedi(model)
+dim(imputedY)
+```
+We can visualize the imputed logit(PSI) of some target genes.
+
+```{r, fig.width=7, fig.height=7}
+# Exon skipping event for Nrxn1
+# CA-18189-887480-931921-932011-933369[INC][12/3]
+event_name<- "CA-18189-887480-931921-932011-933369[INC][12/3]" 
+plot_name<- "Nrxn1 chr17:90162113-90208494"
+GEDI::plot_embedding(umap_2_res, imputedY[event_name,]) +
+    labs(title=plot_name, color="Imputed logit PSI")
+
+# Exon skipping event for Nptn
+# CA-20320-3287-39423-39771-44447[INC][8/120][UPT]
+event_name<- "CA-20320-3287-39423-39771-44447[INC][8/120][UPT]"
+plot_name<- "Nptn chr9:58582406-58623855"
+GEDI::plot_embedding(umap_2_res, imputedY[event_name,]) +
+    labs(title=plot_name, color="Imputed logit PSI")
+```
+
+```{r}
+sessionInfo()
+```
+
