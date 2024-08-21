@@ -1,6 +1,6 @@
 Package: GEDI
 Title: Gene Expression Decomposition and Integration
-Version: 1.0.0
+Version: 1.0.1
 Authors@R: c(
     person("Ariel", "Madrigal", email= "ariel.madrigalaguirre@mail.mcgill.ca", role = c("aut", "cre"),
     person("Hamed", "Najafabadi", email= "hamed.najafabadi@mcgill.ca", role = c("aut", "cre")
