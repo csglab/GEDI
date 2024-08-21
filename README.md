@@ -7,7 +7,7 @@
 - [Installation](#Installation)
 - [Usage](#Usage)
 - [License](./LICENSE.md)
-- [Preprint](#Preprint)
+- [Article](#Article)
 - [Reproducible analysis for manuscript](https://github.com/csglab/GEDI_manuscript)
 - [Contact](#Contact)
 
