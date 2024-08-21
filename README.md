@@ -55,9 +55,9 @@ Check the following notebooks for examples on how to run `GEDI`:
 * [TF analysis in PBMC](https://csglab.github.io/GEDI/vignettes/GEDI_tf_analysis_PBMC.html)
 * [Ratio mode: splicing](https://csglab.github.io/GEDI/vignettes/GEDI_splicing.html)
 
-# Preprint
+# Article
 
-[Madrigal, A., Lu, T., Soto, L. M., & Najafabadi, H. S. (2023). A unified model for interpretable latent embedding of multi-sample, multi-condition single-cell data. bioRxiv, 2023-08.](https://www.biorxiv.org/content/10.1101/2023.08.15.553327v1)
+[Madrigal, A., Lu, T., Soto, L. M., & Najafabadi, H. S. (2023). A unified model for interpretable latent embedding of multi-sample, multi-condition single-cell data. bioRxiv, 2023-08.](https://www.nature.com/articles/s41467-024-50963-0)
 
 # Contact
 
