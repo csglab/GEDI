@@ -57,7 +57,7 @@ Check the following notebooks for examples on how to run `GEDI`:
 
 # Article
 
-[Madrigal, A., Lu, T., Soto, L. M., & Najafabadi, H. S. (2023). A unified model for interpretable latent embedding of multi-sample, multi-condition single-cell data. bioRxiv, 2023-08.](https://www.nature.com/articles/s41467-024-50963-0)
+[Madrigal, A., Lu, T., Soto, L. M., & Najafabadi, H. S. (2024). A unified model for interpretable latent embedding of multi-sample, multi-condition single-cell data. Nature Communications, 15(1), 6573.](https://www.nature.com/articles/s41467-024-50963-0)
 
 # Contact
 
