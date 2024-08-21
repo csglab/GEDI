@@ -1,11 +1,12 @@
 Package: GEDI
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: MIT + file LICENSE
+Title: Gene Expression Decomposition and Integration
+Version: 1.0.0
+Authors@R: c(
+    person("Ariel", "Madrigal", email= "ariel.madrigalaguirre@mail.mcgill.ca", role = c("aut", "cre"),
+    person("Hamed", "Najafabadi", email= "ariel.madrigalaguirre@mail.mcgill.ca", role = c("aut", "cre")
+    )
+Description: Single-cell analysis of multi-condition cohorts requires modelling the interaction between sample variables and cell states. GEDI tackles the issue to enable integration, cluster-free differential expression analysis, and regulon analysis for both gene expression and alternative splicing modalities.
+License: BSD 2-Clause License
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.1
