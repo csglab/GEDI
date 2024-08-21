@@ -3,7 +3,7 @@ Title: Gene Expression Decomposition and Integration
 Version: 1.0.0
 Authors@R: c(
     person("Ariel", "Madrigal", email= "ariel.madrigalaguirre@mail.mcgill.ca", role = c("aut", "cre"),
-    person("Hamed", "Najafabadi", email= "ariel.madrigalaguirre@mail.mcgill.ca", role = c("aut", "cre")
+    person("Hamed", "Najafabadi", email= "hamed.najafabadi@mcgill.ca", role = c("aut", "cre")
     )
 Description: Single-cell analysis of multi-condition cohorts requires modelling the interaction between sample variables and cell states. GEDI tackles the issue to enable integration, cluster-free differential expression analysis, and regulon analysis for both gene expression and alternative splicing modalities.
 License: BSD 2-Clause License
