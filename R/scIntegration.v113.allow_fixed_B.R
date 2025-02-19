@@ -95,7 +95,7 @@ setRefClass(
         minCL2 <- min(colSums(aux$inputC^2)) # calculate the L2 of the smallest column of C
         svdC <- svd(aux$inputC) # Perform SVD on C to obtain uncorrelated components
         aux$P <<- sum( cumsum(rev(svdC$d^2)) > minCL2*0.1 ) # only consider the SVD components that have at least 10% of the variance of the smallest column of C
-        aux$C <<- svdC$u[,1:aux$P] # The C matrix used by GEDI is in fact the U matrix of SVD(C)
+        aux$C <<- svdC$u[,1:aux$P,drop=F] # The C matrix used by GEDI is in fact the U matrix of SVD(C)
         aux$C.rotation <<- svdC$v[,1:aux$P] %*% diag(1/svdC$d[1:aux$P],nrow=aux$P) # Rotation matrix, so that aux$inputC %*% aux$C.rotation == aux$C
         if( aux$J != nrow(aux$C) ) { stop("Incompatible matrices.") }
       } else {
