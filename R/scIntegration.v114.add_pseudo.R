@@ -159,23 +159,22 @@ setRefClass(
         hyperparams$o_0 <<- eigenMatVecProduct(Yp,aux$N_vec) / aux$N # o is initialized as the row-mean of Y, after normalizing for s
 
       } else if( is.list(M) ) { # M is a pair of matrices
-        s1_0 <- eigenVecMatProduct( aux$J_vec, as.matrix(M[[1]]) ) / aux$J # s1 is the column-mean of M1
+        s1_0 <- ( eigenVecMatProduct( aux$J_vec, as.matrix(M[[1]]) ) + 0.01 ) / aux$J # s1 is the column-mean of M1. We add a pseudocount of 0.01 (unit: UMI).
         M1p <- as.matrix(M[[1]]) / eigenVecVecProduct( aux$J_vec, s1_0 ) # M1p is the library size-normalized version of M1
-        o1_0 <- eigenMatVecProduct(M1p,aux$N_vec) / aux$N # o1 is the row-mean of M1p
+        o1_0 <- ( eigenMatVecProduct(M1p,aux$N_vec) + 1e-5 ) / aux$N # o1 is the row-mean of M1p. We add a pseudocount of 1e-5 (unit is the mean expression in the corresponding cell)
 
-        s2_0 <- eigenVecMatProduct( aux$J_vec, as.matrix(M[[2]]) ) / aux$J # s2 is the column-mean of M2
+        s2_0 <- ( eigenVecMatProduct( aux$J_vec, as.matrix(M[[2]]) ) + 0.01 ) / aux$J # s2 is the column-mean of M2
         M2p <- as.matrix(M[[2]]) / eigenVecVecProduct( aux$J_vec, s2_0 ) # M2p is the library size-normalized version of M2
-        o2_0 <- eigenMatVecProduct(M2p,aux$N_vec) / aux$N # o2 is the row-mean of M2p
-
+        o2_0 <- ( eigenMatVecProduct(M2p,aux$N_vec) + 1e-5 ) / aux$N # o2 is the row-mean of M2p
+        
         # Now calculate s_0 and o_0. Note that s_0 is initially saved as a local object, but later it is split by sample and stored in `params`
         s_0 <- log(s1_0/s2_0) # s is initialized as the log ratio of the column means of the paired measurements
         hyperparams$o_0 <<- log(o1_0/o2_0) # o is initialized as the log ratio of the row means of the paired measurements, after normalizing for library size
 
       } else { # M is provided as a single matrix
-        s_0 <- eigenVecMatProduct( aux$J_vec, as.matrix(M) ) / aux$J # s is initialized as the column-mean of M
+        s_0 <- ( eigenVecMatProduct( aux$J_vec, as.matrix(M) ) + 0.01 ) / aux$J # s is initialized as the column-mean of M
         Mp <- as.matrix(M) / eigenVecVecProduct( aux$J_vec, s_0 ) # Mp is the library size-normalized version of M
-        hyperparams$o_0 <<- eigenMatVecProduct(Mp,aux$N_vec) / aux$N # o is initialized as the row-mean of M, after normalizing for s
-
+        hyperparams$o_0 <<- ( eigenMatVecProduct(Mp,aux$N_vec) + 1e-5 ) / aux$N # o is initialized as the row-mean of M, after normalizing for s
         # convert s_0 and o_0 to log-scale, which is compatible with Y
         # Note that s_0 is initially saved as a local object, but later it is split by sample and stored in `params`
         s_0 <- log(s_0)
