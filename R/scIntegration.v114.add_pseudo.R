@@ -670,21 +670,20 @@ setRefClass(
     solve.sigma2 = function()
     {
       # The denominator of sigma2
-      N1 <- aux$J*aux$N # Y
-      # The denominator of scaling factor
-      N2 <-
-        aux$J*aux$numSamples + # oi
+      N <-
+        aux$J*(aux$N+aux$numSamples) + # Y and oi
+        # aux$J + #o. ### This was a mistake that was fixed in v112
         aux$numSamples*aux$J*aux$K + # Qi
         (aux$K+1)*aux$J*aux$L + # Rk and Ro
         aux$K*(aux$J+aux$P) # Z and A
       # For the numerator, first calculate the weighted sum of all coefficients and residuals
-      S1 <- 0
-      S2 <- 0
+      # S <- vecL2_wPrior(params$o,hyperparams$o_0) / hyperparams$S_o ### This was a mistake that was fixed in v112
+      S <- 0
       if( aux$P==0 ) # matrix C is not provided
       {
-        S2 <- S2 + matL2_noPrior(params$Z) / hyperparams$S_Z
+        S <- S + matL2_noPrior(params$Z) / hyperparams$S_Z
       } else { # matrix C is provided
-        S2 <- S2 +
+        S <- S +
           matL2_wPrior(params$Z,aux$C,params$A) / hyperparams$S_Z +
           matL2_noPrior(params$A) / hyperparams$S_Z / hyperparams$S_A
       }
@@ -692,63 +691,64 @@ setRefClass(
       {
         if( aux$L==0 ) # matrix H is not provided
         {
-          S2 <- S2 +
-            vecL2_noPrior(params$oi[[i]]) / hyperparams$S_oi[i] +
-            matL2_noPrior(params$Qi[[i]]) / hyperparams$S_Qi[i]
+          S <- S + vecL2_noPrior(params$oi[[i]]) / hyperparams$S_oi[i]
+          S <- S + matL2_noPrior(params$Qi[[i]]) / hyperparams$S_Qi[i]
         } else { # matrix H is provided
-          S2 <- S2 +
-            vecL2_noPrior(params$oi[[i]]-aux$oi_hat[[i]]) / hyperparams$S_oi[i] +
-            matL2_noPrior(params$Qi[[i]]-aux$Qi_hat[[i]]) / hyperparams$S_Qi[i]
+          S <- S + vecL2_noPrior(params$oi[[i]]-aux$oi_hat[[i]]) / hyperparams$S_oi[i]
+          S <- S + matL2_noPrior(params$Qi[[i]]-aux$Qi_hat[[i]]) / hyperparams$S_Qi[i]
         }
+        # if( !aux$is_si_fixed ) {
+        #   S <- S + vecL2_wPrior(params$si[[i]],hyperparams$si_0[[i]]) / hyperparams$S_si
+        #   N <- N + aux$N # Now that we know si is not fixed, add its contribution to the denominator
+        # } ### This was a mistake that was fixed in v112
+        
         # Calculate the residual of Yi, and add it to S
         if( aux$obs.type=="Y" ) {
-          S1 <- S1 + Yi_SSE_fixed(
+          S <- S + Yi_SSE_fixed(
             target$Yi[[i]],
             aux$ZDBi[[i]], aux$QiDBi[[i]],
             params$si[[i]], params$o, params$oi[[i]] )
         } else if( aux$obs.type=="M" ) {
-          S1 <- S1 + Yi_SSE_M(
+          S <- S + Yi_SSE_M(
             target$Yi[[i]],
             aux$ZDBi[[i]], aux$QiDBi[[i]],
             params$si[[i]], params$o, params$oi[[i]],
             params$sigma2 )
         } else if( aux$obs.type=="M_paired" ) {
-          S1 <- S1 + Yi_SSE_M_paired(
+          S <- S + Yi_SSE_M_paired(
             target$Yi[[i]],
             target$M1i[[i]], target$M2i[[i]],
             aux$ZDBi[[i]], aux$QiDBi[[i]],
             params$si[[i]], params$o, params$oi[[i]],
             params$sigma2 )
-        } else { stop("Unrecognized mode.") }
+        }
       }
       # add the L2 norm of Rk's and Ro
       if( aux$L > 0 ) {
         for( k in 1:aux$K ) {
-          S2 <- S2 + matL2_noPrior(params$Rk[[k]]) / hyperparams$S_Qi_mean / hyperparams$S_R
+          S <- S + matL2_noPrior(params$Rk[[k]]) / hyperparams$S_Qi_mean / hyperparams$S_R
         }
-        S2 <- S2 + matL2_noPrior(params$Ro) / hyperparams$S_oi_mean / hyperparams$S_R
+        S <- S + matL2_noPrior(params$Ro) / hyperparams$S_oi_mean / hyperparams$S_R
       }
       # Normalize sigma2
-      if( aux$update_priors ) {
-        params$sigma2 <<- S1/N1
-        hyperparams$scaling <<- S2/N2/params$sigma2+1 # The law of total variance
+      if( aux$obs.type != "X" ) {
+        #params$sigma2 <<- (2+S)/(4+N) # use a prior inverse gamma distribution with a=1 and b=1
+        params$sigma2 <<- S/N # use a prior inverse gamma distribution with a=1 and b=1
       } else {
-        params$sigma2 <<- (S1+S2)/(N1+N2)
+        params$sigma2 <<- 1 # In the probit model, sigma2 is always 1
       }
-
       tracking$sigma2[aux$ite] <<- params$sigma2
       cat(params$sigma2,"\n")
-      cat(hyperparams$scaling,"\n")
-
+      
       # Update the hyperpriors for o and si
       hyperparams$o_0 <<- rep(mean(params$o),aux$J)
-      hyperparams$S_o <<- vecL2_wPrior(params$o,hyperparams$o_0) / aux$J / params$sigma2
+      hyperparams$S_o <<- (vecL2_wPrior(params$o,hyperparams$o_0)+2) / params$sigma2 / (aux$J+2) # inverse-gamma prior alpha=beta=1
       tmp <- 0
       for( i in 1:aux$numSamples ) {
         tmp <- tmp + vecL2_wPrior(params$si[[i]],hyperparams$si_0[[i]])
       }
-      hyperparams$S_si <<- tmp / aux$N / params$sigma2
-
+      hyperparams$S_si <<- (tmp / params$sigma2+2) / (aux$N+2) # inverse-gamma prior alpha=beta=1
+      
       cat("Mean(o):",hyperparams$o_0[1],"; Var(o):",hyperparams$S_o,"; Var(si):",hyperparams$S_si,"\n")
     },
 
@@ -756,7 +756,7 @@ setRefClass(
     # Solve Yi using raw counts Mi
     # `i`: the index of the sample for which oi is being updated
     # Note that this function requires ZDBi and QiDBi to be up-to-date
-    solve.Yi = function( i )
+    solve.Yi.M = function( i )
     {
       # Calculate the estimate of Yi based on model parameters
       target$Yi[[i]] <<- solveYi(
@@ -765,7 +765,7 @@ setRefClass(
         aux$ZDBi[[i]], aux$QiDBi[[i]],
         params$si[[i]], params$o, params$oi[[i]],
         params$sigma2 )
-
+      
       #return(1)
     },
 
@@ -774,7 +774,7 @@ setRefClass(
     # Solve Yi using a pair of raw count matrices M1i and M2i
     # `i`: the index of the sample for which oi is being updated
     # Note that this function requires ZDBi and QiDBi to be up-to-date
-    solve.Yi.paired = function( i )
+    solve.Yi.M_paired = function( i )
     {
       # Calculate the estimate of Yi based on model parameters
       target$Yi[[i]] <<- solveYi_paired(
@@ -783,7 +783,7 @@ setRefClass(
         aux$ZDBi[[i]], aux$QiDBi[[i]],
         params$si[[i]], params$o, params$oi[[i]],
         params$sigma2 )
-
+      
       #return(1)
     },
 
@@ -911,12 +911,12 @@ setRefClass(
         solve.o()
         # If necessary, solve Yi for all samples, and then update sigma2
         if( aux$obs.type=="M" ) {
-          for( i in 1:aux$numSamples ) { solve.Yi(i) }
-          solve.sigma2() # since sigma2 is only needed for solving Yi, it won't be updated if Y is observed
+          for( i in 1:aux$numSamples ) { solve.Yi.M(i) }
         } else if( aux$obs.type=="M_paired" ) {
-          for( i in 1:aux$numSamples ) { solve.Yi.paired(i) }
-          solve.sigma2() # since sigma2 is only needed for solving Yi, it won't be updated if Y is observed
+          for( i in 1:aux$numSamples ) { solve.Yi.M_paired(i) }
         }
+        # Update sigma2
+        solve.sigma2()        
         # Solve A, if C is provided
         if( aux$P > 0 ) {
           solve.A()

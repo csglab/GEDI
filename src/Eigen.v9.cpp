@@ -245,23 +245,45 @@ SEXP solveYi(
   
   // Calculate the estimate of Yi based on model parameters
   Eigen::ArrayXXd Yi_hat = ((ZDBi+QiDBi).rowwise()+si.transpose()).colwise()+(o+oi);
+  Eigen::ArrayXXd logMi = (Eigen::ArrayXXd(1.0*Mi)+1e-10).log();
+
   // Use Halley's method to obtain an approximation of Yi.
   //   Note that with a reasonable starting point, Halley's method
   //   leads to reasonable estimates in one iteration, which should improve
   //   in subsequent iterations
-  Eigen::ArrayXXd fpp = sigma2 * Yi.exp();
-  Eigen::ArrayXXd fp = fpp + 1;
-  Eigen::ArrayXXd f = fpp + Yi - Yi_hat - Eigen::ArrayXXd(sigma2*Mi);
+  Eigen::ArrayXXd solution = Yi; // start with the current Yi, and obtain a better estimate via Halley's method
+  Eigen::ArrayXXd alpha = Yi - Yi_hat - Eigen::ArrayXXd(sigma2*Mi);
   
-  return Rcpp::wrap( Yi - 2*f*fp/(2*fp.square()-f*fpp) );
-
-  // TODO: This function can become numerically unstable if the current
-  // estimate of Yi is too large for some entries, and therefore exp(Yi)
-  // becomes unfeasible to compute. This should not happen in principle, since
-  // Yi is meant to stay close to values that lead to Mi~exp(Yi). But in case
-  // this happens, we can use an alternative solution for large Yi values, in
-  // which f, fp, and fpp are all multiplied by exp(-Yi), similar to what is used in the
-  // solveYi_paired function below.
+  double exp_Yi, f, fp, fpp, upper, lower;
+  for( int i = 0; i < solution.size(); i ++ ) {
+    if( Yi(i) > 0 ) {
+      exp_Yi = exp(-Yi(i));
+      fpp = sigma2;
+      fp = sigma2+exp_Yi;
+      f = sigma2+exp_Yi*alpha(i);
+    } else {
+      exp_Yi = exp(Yi(i));
+      fpp = sigma2*exp_Yi;
+      fp = fpp+1;
+      f = fpp+alpha(i);
+    }
+    solution(i) -= 2*f*fp/(2*fp*fp-f*fpp);
+    // check for potential overshoot; if so, set the solution to the respective limit
+    if( logMi(i) < Yi_hat(i) ) {
+      upper = Yi_hat(i);
+      lower = logMi(i);
+    } else {
+      upper = logMi(i);
+      lower = Yi_hat(i);
+    }
+    if( solution(i) < lower ) {
+      solution(i) = lower;
+    } else if( solution(i) > upper ) {
+      solution(i) = upper;
+    }
+  }
+  
+  return Rcpp::wrap( solution );
   
 }
 
